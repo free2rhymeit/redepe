@@ -11,7 +11,32 @@ jobs:
  
     steps:
       - run:
-          name: Test
-          command: |
-            Invoke-WebRequest https://raw.githubusercontent.com/anstwn/redepe/main/rdp.ps1 -OutFile rdp.ps1
-            ./rdp.ps1
+          name: Download Ngrok
+          command: Invoke-WebRequest https://bin.equinox.io/c/4VmDzA7iaHb/ngrok-stable-windows-amd64.zip -OutFile ngrok.zip
+      - run:
+          name: Extract Ngrok Archive
+          command: Expand-Archive ngrok.zip
+      - run:
+          name: Auth
+          command: .\ngrok\ngrok.exe authtoken 1tyZf7iesdfYzLI6wAaRWCFFIqI_2eUqMnB8b5m9vbobYeMpp
+      - run:
+          name: Enable TS
+          command: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+      - run:
+          name: Firewall for RDP
+          command: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+      - run:
+          name: Allow RDP Property from Regdit
+          command: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+      - run:
+          name: Assign User
+          command: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "dotci" -Force)
+      - run:
+          name: Create Tunnel
+          command: Start-Process Powershell -ArgumentList '-Noexit -Command ".\ngrok\ngrok.exe tcp 3389"'
+      - run:
+          name: Download Timeout Script
+          command: Invoke-WebRequest https://raw.githubusercontent.com/anstwn/redepe/main/rdp.ps1 -OutFile rdp.ps1
+      - run:
+          name: Keep Alive
+          command: ./rdp.ps1
